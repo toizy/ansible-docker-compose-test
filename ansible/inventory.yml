@@ -1,0 +1,12 @@
+---
+
+all:
+  vars:
+    remote_owner: "toizy"
+    remote_group: "toizy"
+  hosts:
+    remote_server:
+      ansible_host: 87.242.103.178
+      ansible_port: 22
+      ansible_user: "{{ remote_owner }}"
+      ansible_ssh_private_key_file: "/home/toizy/.ssh/id_ed25519"

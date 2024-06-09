@@ -1,0 +1,85 @@
+---
+# Демонстрационный пример плейбука ansible.
+# 
+# Поднимает в docker-composer сервис коммуникации Telegram с mongodb в качестве БД для хранения состояний.
+#
+#
+- name: Ansible deploy test
+  hosts: remote_server
+  become: true
+  vars:
+    app_name: "communication-service"
+    app_path: ../docker/
+    remote_app_path: /opt/communication-service
+  tasks:
+    # Если архитектура не поддерживается, прерываем выполнение
+    - name: Fail if architecture is not supported
+      fail:
+        msg: "Unsupported architecture: {{ ansible_architecture }}"
+      when: ansible_architecture not in ["x86_64", "aarch64"]
+    # ------------------------------------------------------
+    #
+    # Проверка существования и создание пользователя и группы
+    - name: Ensure the group exists
+      ansible.builtin.group:
+        name: "{{ remote_owner }}"
+        state: present
+
+    - name: Ensure the user exists
+      ansible.builtin.user:
+        name: "{{ remote_owner }}"
+        group: "{{ remote_group }}"
+        state: present
+    # ------------------------------------------------------
+    # Установка Docker и Docker-Compose
+    - name: Install Docker and Docker Compose
+      apt:
+        name: docker.io
+        state: present
+    # ------------------------------------------------------
+    #
+    # Создание директорий и копирование файлов
+    - name: Create application directory on remote server
+      ansible.builtin.file:
+        path: "{{ remote_app_path }}"
+        state: directory
+
+    - name: Copy application files to remote server
+      ansible.builtin.copy:
+        src: "{{ app_path }}/"
+        dest: "{{ remote_app_path }}"
+        owner: "{{ remote_owner }}"
+        group: "{{ remote_group }}"
+        mode: "0755"
+    # ------------------------------------------------------
+    #
+    # Запуск сборки приложения
+    - name: Build and run the Docker Compose application
+      ansible.builtin.command:
+        cmd: docker-compose up -d
+        chdir: "{{ remote_app_path }}"
+      # Отключить задачу:
+      #   when: false     # Простой метод
+      # или:
+      #   tag: tag        # Гибкий метод
+      # или так:
+      #   tag:
+      #     - tag1
+      #     - tag2
+      # В этом случаае, отключаем задачу, передав аргумент --skip-tags "tag1,tag2"
+      # Выполнение только определённых задач: --tags "tag1,tag2"
+    # ------------------------------------------------------
+    #
+    # Установка ufw
+    - name: Install ufw if not installed
+      apt:
+        name: ufw
+        state: present
+    # ------------------------------------------------------
+    #
+    # Открытие порта приложения через ufw
+    - name: Allow incoming traffic on port 8000/tcp
+      ufw:
+        rule: allow
+        port: "8000"
+        proto: tcp

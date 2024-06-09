@@ -1,0 +1,21 @@
+version: "3.8"
+
+services:
+  mongodb:
+    image: mongo:latest
+    container_name: "communication-service-mongodb"
+    ports:
+      - "27017:27017"
+    volumes:
+      - "mongodb-communication-service:/data/db/"
+
+  communication:
+    build: ./app
+    container_name: "communication-service-app"
+    ports:
+      - "0.0.0.0:8000:8000"
+    depends_on:
+      - mongodb
+
+volumes:
+  mongodb-communication-service:
